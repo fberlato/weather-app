@@ -17,7 +17,7 @@ from weather_app import __app_name__, __version__
 API_KEY = os.getenv('OPENWEATHER_API_KEY')
 BASE_URL = 'http://api.weatherapi.com/v1'
 
-degree = chr(176)
+degree: str = chr(176)
 
 app = typer.Typer()
 console = Console()
@@ -181,7 +181,7 @@ def generate_search_table(response_dict: dict) -> Table:
 
     table = Table(
         show_footer=False,
-        title=f'[bold]Search results[/bold]',
+        title='[bold]Search results[/bold]',
         title_justify='left'
     )
 
@@ -234,7 +234,6 @@ def search(
             console.log('The search returned no result')
 
         else:
-            #print(response_content)
             search_table = generate_search_table(response_content)
             console.print(search_table)
 
@@ -329,7 +328,6 @@ def forecast(
         if response.is_success:
             console.log('Request successful')
             if hourly:
-                #print(response_content['forecast']['forecastday'][0]['hour'])
                 table = generate_hourly_table(response_content)
                 console.clear()
                 console.print(table)
@@ -373,6 +371,7 @@ def version_callback(value: bool):
 def main(
         version: Annotated[
             Optional[bool], typer.Option("--version", callback=version_callback)
+
         ] = None,
     ):
     print(f'[bold green]Welcome to {__app_name__}![/bold green]')
