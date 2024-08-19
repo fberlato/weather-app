@@ -2,6 +2,7 @@ import typer
 import httpx
 import datetime
 import os
+import asyncio
 from dateutil.relativedelta import relativedelta
 from typing import Optional
 from typing_extensions import Annotated
@@ -11,6 +12,7 @@ from rich.panel import Panel
 from rich.console import Console
 from weather_app import __app_name__, __version__
 
+
 # api key is set as an environment variable
 API_KEY = os.getenv('OPENWEATHER_API_KEY')
 BASE_URL = 'http://api.weatherapi.com/v1'
@@ -19,6 +21,39 @@ degree = chr(176)
 
 app = typer.Typer()
 console = Console()
+
+
+async def request_data(params_dict_list: list[dict], verbose: bool = False) -> list[dict]:
+    tasks = []
+
+    async with httpx.AsyncClient() as client:
+        for params in params_dict_list:
+            tasks.append(client.get('http://api.weatherapi.com/v1/forecast.json', params=params))
+
+        response_list = await asyncio.gather(*tasks)
+
+    data_list = []
+
+    for response in response_list:
+        response_content = response.json()
+        status_code = response.status_code
+
+        if not response.is_success:
+            error_message = response_content['error']['message']
+
+            if verbose:
+                error_code = response_content['error']['code']
+                print(f'[red][bold]ERROR {error_code} (status code {status_code}):[/bold] {error_message}[/red]')
+
+            else:
+                print(f'[red][bold]ERROR:[/bold] {error_message}[/red]')
+
+            raise ValueError
+
+        else:
+            data_list.append(response.json())
+
+    return data_list
 
 
 def generate_summary_panel(response_dict: dict) -> Panel:
@@ -238,7 +273,6 @@ def current(
 
     if response.is_success:
         console.log('Request successful')
-        #print(response_content)
         summary_panel = generate_summary_panel(response_content)
         console.print(summary_panel)
 
@@ -315,36 +349,18 @@ def forecast(
 
     elif days:
 
-        date_range = [datetime.date.today() + relativedelta(days=i) for i in range(days)]
-        response_list = []
+        date_range: list[datetime.date] = [datetime.date.today() + relativedelta(days=i) for i in range(days)]
+        params_dict_list: list[dict] = []
 
         for date in date_range:
-            params['dt'] = date.strftime('%Y-%m-%d')
-            response = httpx.get('http://api.weatherapi.com/v1/forecast.json', params=params)
-            response_content = response.json()
-            status_code = response.status_code
+            params = {'key': API_KEY, 'q': location, 'dt': date.strftime('%Y-%m-%d')}
+            params_dict_list.append(params)
 
-            if not response.is_success:
-                date_string = date.strftime('%Y-%m-%d')
-                error_message = response_content['error']['message'].strip('.')
+        response_list = asyncio.run(request_data(params_dict_list, verbose))
 
-                if verbose:
-                    error_code = response_content['error']['code']
-                    print(f'[red][bold]ERROR {error_code} (status code {status_code}):'
-                          f'[/bold] {error_message} for date {date_string}, stopping API calls.[/red]')
-
-                else:
-                    print(f'[red][bold]ERROR:[/bold] {error_message} for date {date_string}, stopping API calls.[/red]')
-
-                break
-
-            else:
-                response_list.append(response_content)
-
-        else:
-            table = generate_daily_table(response_list)
-            console.clear()
-            console.print(table)
+        table = generate_daily_table(response_list)
+        console.clear()
+        console.print(table)
 
 
 def version_callback(value: bool):
