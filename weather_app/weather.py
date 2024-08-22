@@ -14,7 +14,7 @@ from weather_app import __app_name__, __version__
 
 
 # api key is set as an environment variable
-API_KEY = os.getenv('OPENWEATHER_API_KEY')
+API_KEY = os.getenv('WEATHER_API_KEY')
 BASE_URL = 'http://api.weatherapi.com/v1'
 
 degree: str = chr(176)

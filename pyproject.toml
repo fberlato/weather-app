@@ -6,6 +6,9 @@ authors = ["fberlato <francesco.berlato.92@gmail.com>"]
 readme = "README.md"
 packages = [{include = "weather_app"}]
 
+[tool.poetry.scripts]
+weather-app = "weather_app.weather:app"
+
 [tool.poetry.dependencies]
 python = "^3.11"
 httpx = "^0.27.0"

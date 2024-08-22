@@ -1,0 +1,1 @@
+A simple CLI app to access weather data. Requires a free api key from https://www.weatherapi.com/ .
