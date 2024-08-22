@@ -1,7 +1,7 @@
 import typer
 import httpx
 import datetime
-import os
+#import os
 import asyncio
 from dateutil.relativedelta import relativedelta
 from typing import Optional
@@ -11,11 +11,15 @@ from rich.table import Table
 from rich.panel import Panel
 from rich.console import Console
 from weather_app import __app_name__, __version__
+from weather_app.authentication import Authenticator
 
 
 # api key is set as an environment variable
-API_KEY = os.getenv('WEATHER_API_KEY')
+SERVICE_NAME = "weather_app"
+USER_NAME = "weather_user_key"
+#API_KEY = os.getenv('WEATHER_API_KEY')
 BASE_URL = 'http://api.weatherapi.com/v1'
+
 
 degree: str = chr(176)
 
@@ -221,8 +225,9 @@ def search(
     console.log(f'Fetching data for location {location}...')
 
     url = BASE_URL + '/search.json'
+    api_key = Authenticator.authenticate()
 
-    params = {'key': API_KEY, 'q': location}
+    params = {'key': api_key, 'q': location}
     response = httpx.get(url, params=params)
     response_content = response.json()
     status_code = response.status_code
@@ -264,8 +269,9 @@ def current(
     console.log(f'Fetching data for location {location}...')
 
     url = BASE_URL + '/current.json'
+    api_key = Authenticator.authenticate()
 
-    params = {'key': API_KEY, 'q': location}
+    params = {'key': api_key, 'q': location}
     response = httpx.get(url, params=params)
     response_content = response.json()
     status_code = response.status_code
@@ -307,7 +313,9 @@ def forecast(
     """
 
     url = BASE_URL + '/forecast.json'
-    params = {'key': API_KEY, 'q': location}
+    api_key = Authenticator.authenticate()
+
+    params = {'key': api_key, 'q': location}
     # the API only supports forecasts up to 14 days in the future
     if date:
         max_date = datetime.date.today() + relativedelta(days=14)
@@ -333,7 +341,10 @@ def forecast(
                 console.print(table)
 
             else:
-                print(response_content['forecast']['forecastday'][0]['day'])
+                response_list = [response_content]
+                table = generate_daily_table(response_list)
+                console.clear()
+                console.print(table)
 
         else:
             error_message = response_content['error']['message']
@@ -351,7 +362,7 @@ def forecast(
         params_dict_list: list[dict] = []
 
         for date in date_range:
-            params = {'key': API_KEY, 'q': location, 'dt': date.strftime('%Y-%m-%d')}
+            params |= {'dt': date.strftime('%Y-%m-%d')}
             params_dict_list.append(params)
 
         response_list = asyncio.run(request_data(params_dict_list, verbose))
@@ -359,6 +370,41 @@ def forecast(
         table = generate_daily_table(response_list)
         console.clear()
         console.print(table)
+
+    else:
+        # default case is today hourly
+        params['dt'] = datetime.datetime.today().strftime('%Y-%m-%d')
+
+        console.log(f'Fetching data for location {location}...')
+
+        response = httpx.get(url, params=params)
+        response_content = response.json()
+        status_code = response.status_code
+
+        if response.is_success:
+            console.log('Request successful')
+            table = generate_hourly_table(response_content)
+            console.clear()
+            console.print(table)
+
+        else:
+            error_message = response_content['error']['message']
+
+            if verbose:
+                error_code = response_content['error']['code']
+                print(f'[red][bold]ERROR {error_code} (status code {status_code}):[/bold] {error_message}[/red]')
+
+            else:
+                print(f'[red][bold]ERROR:[/bold] {error_message}[/red]')
+
+
+@app.command()
+def addkey(
+        key: Annotated[str, typer.Argument(help='Your user API key.')],
+        overwrite: Annotated[bool, typer.Option(help='Use if intending to overwrite any previous key.')] = False
+) -> None:
+    string_response = Authenticator.store_key(key, overwrite)
+    console.log(string_response)
 
 
 def version_callback(value: bool):
@@ -370,8 +416,7 @@ def version_callback(value: bool):
 @app.command()
 def main(
         version: Annotated[
-            Optional[bool], typer.Option("--version", callback=version_callback)
-
+            Optional[bool], typer.Option('--version', callback=version_callback)
         ] = None,
     ):
     print(f'[bold green]Welcome to {__app_name__}![/bold green]')
