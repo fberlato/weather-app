@@ -1,7 +1,7 @@
 import typer
 import httpx
 import datetime
-#import os
+# import os
 import asyncio
 from dateutil.relativedelta import relativedelta
 from typing import Optional
@@ -17,7 +17,7 @@ from weather_app.authentication import Authenticator
 # api key is set as an environment variable
 SERVICE_NAME = "weather_app"
 USER_NAME = "weather_user_key"
-#API_KEY = os.getenv('WEATHER_API_KEY')
+# API_KEY = os.getenv('WEATHER_API_KEY')
 BASE_URL = 'http://api.weatherapi.com/v1'
 
 
@@ -403,11 +403,18 @@ def addkey(
         key: Annotated[str, typer.Argument(help='Your user API key.')],
         overwrite: Annotated[bool, typer.Option(help='Use if intending to overwrite any previous key.')] = False
 ) -> None:
+    """
+    Store an API key to be used to access the data.
+
+    :param key: string representing the API key to be stored.
+    :param overwrite: bool set to True to overwrite any previous key. Default: False.
+    :return:
+    """
     string_response = Authenticator.store_key(key, overwrite)
     console.log(string_response)
 
 
-def version_callback(value: bool):
+def version_callback(value: bool) -> None:
     if value:
         print(f"[bold green]{__app_name__} version:[/bold green] {__version__}")
         raise typer.Exit()
@@ -418,7 +425,7 @@ def main(
         version: Annotated[
             Optional[bool], typer.Option('--version', callback=version_callback)
         ] = None,
-    ):
+    ) -> None:
     print(f'[bold green]Welcome to {__app_name__}![/bold green]')
 
 

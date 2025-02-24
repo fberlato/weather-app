@@ -1,22 +1,32 @@
-[tool.poetry]
+[project]
 name = "weather-app"
 version = "0.1.0"
 description = "A CLI app to access realtime weather data and forecasts"
-authors = ["fberlato <francesco.berlato.92@gmail.com>"]
+authors = [{ name = "fberlato", email = "francesco.berlato.92@gmail.com" }]
+requires-python = "<4.0,>=3.11"
 readme = "README.md"
-packages = [{include = "weather_app"}]
+dependencies = [
+    "httpx<1.0.0,>=0.27.0",
+    "rich<14.0.0,>=13.7.1",
+    "python-dateutil<3.0.0.0,>=2.9.0.post0",
+    "typer[all]<1.0.0,>=0.12.4",
+    "keyring<26.0.0,>=25.3.0",
+]
 
-[tool.poetry.scripts]
+[project.scripts]
 weather-app = "weather_app.weather:app"
 
-[tool.poetry.dependencies]
-python = "^3.11"
-httpx = "^0.27.0"
-rich = "^13.7.1"
-python-dateutil = "^2.9.0.post0"
-typer = {extras = ["all"], version = "^0.12.4"}
+[tool.hatch.build.targets.sdist]
+include = ["weather_app"]
 
+[tool.hatch.build.targets.wheel]
+include = ["weather_app"]
+
+[tool.pdm.build]
+includes = [
+    "weather_app",
+]
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
